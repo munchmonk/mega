@@ -4,12 +4,12 @@ from const import *
 
 
 class Wall(pygame.sprite.Sprite):
-	def __init__(self, game, x, y):
+	def __init__(self, game, x, y, w, h):
 		self.groups = game.walls
 		pygame.sprite.Sprite.__init__(self, self.groups)
-		self.game = game
-		self.x = x
-		self.y = y
+		self.rect = pygame.Rect(x, y, w, h)
+		self.x = x / TILESIZE
+		self.y = y / TILESIZE
 
 	def update(self):
 		pass
@@ -24,14 +24,14 @@ class Player(pygame.sprite.Sprite):
 		pygame.sprite.Sprite.__init__(self, self.groups)
 		self.game = game
 		self.image = pygame.image.load('player.png')
-		self.rect = self.image.get_rect(topleft=(x * TILESIZE, y * TILESIZE))
-		self.x = x
-		self.y = y
+		self.rect = self.image.get_rect(topleft=(x, y))
+		self.x = x / TILESIZE
+		self.y = y / TILESIZE
 
 		# Movement
 		self.dx = 0
 		self.dy = 0
-		self.speed = 100
+		self.speed = 300
 		self.to_next_tile = 0
 
 	def move(self):
@@ -68,11 +68,20 @@ class Player(pygame.sprite.Sprite):
 			self.x = self.rect.x / TILESIZE
 			self.y = self.rect.y / TILESIZE
 
+	# def is_walkable(self, dx, dy):
+	# 	target_x = self.x + dx
+	# 	target_y = self.y + dy
+	# 	for wall in self.game.walls:
+	# 		if wall.x == target_x and wall.y == target_y:
+	# 			return False
+	# 	return True
+
 	def is_walkable(self, dx, dy):
 		target_x = self.x + dx
 		target_y = self.y + dy
+		target_rect = pygame.Rect(target_x * TILESIZE, target_y * TILESIZE, TILESIZE, TILESIZE)
 		for wall in self.game.walls:
-			if wall.x == target_x and wall.y == target_y:
+			if pygame.Rect.colliderect(target_rect, wall.rect):
 				return False
 		return True
 

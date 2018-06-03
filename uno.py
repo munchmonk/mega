@@ -9,6 +9,29 @@ from sprites import *
 from const import *
 
 
+class Camera:
+	def __init__(self,width, height):
+		self.rect = pygame.Rect(0, 0, width, height)
+		self.width = width
+		self.height = height
+
+	def apply(self, entity):
+		return entity.rect.move(self.rect.topleft)
+
+	def apply_rect(self, rect):
+		return rect.move(self.rect.topleft)
+
+	def update(self, target):
+		x = -target.rect.x + int(SCREENWIDTH / 2) - TILESIZE / 2
+		y = -target.rect.y + int(SCREENHEIGHT / 2) - TILESIZE / 2
+
+		x = min(0, x)
+		y = min(0, y)
+		x = max(x, -(self.width - SCREENWIDTH))
+		y = max(y, -(self.height - SCREENHEIGHT))
+		self.rect = pygame.Rect(x, y, self.width, self.height)
+
+
 class TiledMap:
 	def __init__(self, filename):
 		self.mapdata = load_pygame(filename, pixelalpha=True)
@@ -33,10 +56,10 @@ class Game:
 	def __init__(self):	
 		pygame.init()
 
-		self.screen = pygame.display.set_mode((TILEWIDTH * TILESIZE, TILEHEIGHT * TILESIZE))
+		self.screen = pygame.display.set_mode((SCREENWIDTH, SCREENHEIGHT))
 		self.clock = pygame.time.Clock()
 
-	def check_events(self):
+	def check_quit(self):
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
 				self.quit()
@@ -46,15 +69,11 @@ class Game:
 		sys.exit()
 
 	def make_sprites(self):
-		for layer in self.tiledmap.mapdata.layers:
-			if isinstance(layer, pytmx.TiledTileLayer):
-				for(x, y, gid) in layer:
-					tile = self.tiledmap.mapdata.get_tile_image_by_gid(gid)
-					if tile:
-						if layer.name == '4locked':
-							Wall(self, x, y)
-						if layer.name == 'p':
-							Player(self, x, y)
+		for tile_object in self.tiledmap.mapdata.objects:
+			if tile_object.name == 'wall':
+				Wall(self, tile_object.x, tile_object.y, tile_object.width, tile_object.height)
+			if tile_object.name == 'player':
+				self.player = Player(self, tile_object.x, tile_object.y)
 
 	def setup(self):
 		# Map
@@ -62,8 +81,12 @@ class Game:
 		self.map_image = self.tiledmap.make_map()
 		self.map_rect = self.map_image.get_rect()
 
+		# Camera
+		self.camera = Camera(self.tiledmap.width, self.tiledmap.height)
+
 		# Sprite groups
 		self.allsprites = pygame.sprite.Group()
+		self.player = None
 		self.walls = pygame.sprite.Group()
 
 		self.make_sprites()
@@ -71,16 +94,19 @@ class Game:
 	def run(self):
 		while True:
 			self.dt = self.clock.tick(FPS) / 1000.0
-			self.check_events()
+			self.check_quit()
 			self.update()
 			self.draw()
 
 	def update(self):
 		self.allsprites.update()
+		self.camera.update(self.player)
 
 	def draw(self):
-		self.screen.blit(self.map_image, self.map_rect)
-		self.allsprites.draw(self.screen)
+		self.screen.blit(self.map_image, self.camera.apply_rect(self.map_rect))
+		for sprite in self.allsprites:
+			self.screen.blit(sprite.image, self.camera.apply(sprite))
+		# self.allsprites.draw(self.screen)
 		pygame.display.flip()
 
 
